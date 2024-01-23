@@ -3,9 +3,11 @@ package spnego
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/cobraqxx/gokrb5/v8/asn1tools"
 	"github.com/cobraqxx/gokrb5/v8/client"
@@ -205,7 +207,7 @@ func (s *SPNEGOToken) Context() context.Context {
 	return s.context
 }
 
-func GetTicketFromSPNEGO(kt *keytab.Keytab, w http.ResponseWriter, r *http.Request) (messages.Ticket, error) {
+func GetTicketFromSPNEGO(kt *keytab.Keytab, r *http.Request) (messages.Ticket, error) {
 	var ticket messages.Ticket
 
 	// Set up the SPNEGO GSS-API mechanism
@@ -221,7 +223,7 @@ func GetTicketFromSPNEGO(kt *keytab.Keytab, w http.ResponseWriter, r *http.Reque
 	}
 
 	// TODO убрать возможность отправки сообщений
-	st, err := getAuthorizationNegotiationHeaderAsSPNEGOToken(spnego, r, w)
+	st, err := getSPNEGOTokenFromRequest(spnego, r)
 	if st == nil || err != nil {
 		// response to client and logging handled in function above so just return
 		return ticket, err
@@ -245,13 +247,48 @@ func GetTicketFromSPNEGO(kt *keytab.Keytab, w http.ResponseWriter, r *http.Reque
 
 	sname := &mt.APReq.Ticket.SName
 	err = mt.APReq.Ticket.DecryptEncPart(kt, sname)
+	if err != nil {
+		return ticket, fmt.Errorf("DecryptEncPart was failed")
+	}
 
 	// Decrypt authenticator with session key from ticket's encrypted part
-	//err = a.DecryptAuthenticator(a.Ticket.DecryptedEncPart.Key)
-	//if err != nil {
-	//	return false, NewKRBError(a.Ticket.SName, a.Ticket.Realm, errorcode.KRB_AP_ERR_BAD_INTEGRITY, "could not decrypt authenticator")
-	//}
+	err = mt.APReq.DecryptAuthenticator(mt.APReq.Ticket.DecryptedEncPart.Key)
+	if err != nil {
+		return ticket, fmt.Errorf("DecryptAuthenticator was failed")
+	}
 
 	ticket = mt.APReq.Ticket
-	return ticket, fmt.Errorf("DecryptEncPart was failed")
+	return ticket, nil
+}
+
+func getSPNEGOTokenFromRequest(spnego *SPNEGO, r *http.Request) (*SPNEGOToken, error) {
+	s := strings.SplitN(r.Header.Get(HTTPHeaderAuthRequest), " ", 2)
+	if len(s) != 2 || s[0] != HTTPHeaderAuthResponseValueKey {
+		// No Authorization header set so return 401 with WWW-Authenticate Negotiate header
+		return nil, errors.New("client did not provide a negotiation authorization header")
+	}
+
+	// Decode the header into an SPNEGO context token
+	b, err := base64.StdEncoding.DecodeString(s[1])
+	if err != nil {
+		err = fmt.Errorf("error in base64 decoding negotiation header: %v", err)
+		return nil, err
+	}
+	var st SPNEGOToken
+	err = st.Unmarshal(b)
+	if err != nil {
+		// Check if this is a raw KRB5 context token - issue #347.
+		var k5t KRB5Token
+		if k5t.Unmarshal(b) != nil {
+			err = fmt.Errorf("error in unmarshaling SPNEGO token: %v", err)
+			return nil, err
+		}
+		// Wrap it into an SPNEGO context token
+		st.Init = true
+		st.NegTokenInit = NegTokenInit{
+			MechTypes:      []asn1.ObjectIdentifier{k5t.OID},
+			MechTokenBytes: b,
+		}
+	}
+	return &st, nil
 }
