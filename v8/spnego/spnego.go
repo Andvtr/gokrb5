@@ -243,15 +243,15 @@ func GetTicketFromSPNEGO(kt *keytab.Keytab, w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	ok, _, err := service.VerifyAPREQ(&mt.APReq, mt.settings)
-	if err != nil {
-		return ticket, err
-	}
-	if !ok {
-		return ticket, fmt.Errorf("verifing TGS from SPNEGO token was failed")
-	}
+	sname := &mt.APReq.Ticket.SName
+	err = mt.APReq.Ticket.DecryptEncPart(kt, sname)
+
+	// Decrypt authenticator with session key from ticket's encrypted part
+	//err = a.DecryptAuthenticator(a.Ticket.DecryptedEncPart.Key)
+	//if err != nil {
+	//	return false, NewKRBError(a.Ticket.SName, a.Ticket.Realm, errorcode.KRB_AP_ERR_BAD_INTEGRITY, "could not decrypt authenticator")
+	//}
 
 	ticket = mt.APReq.Ticket
-
-	return ticket, nil
+	return ticket, fmt.Errorf("DecryptEncPart was failed")
 }
