@@ -106,3 +106,36 @@ func (cl *Client) GetServiceTicket(spn string) (messages.Ticket, types.Encryptio
 	}
 	return tgsRep.Ticket, tgsRep.DecryptedEncPart.Key, nil
 }
+
+// GetServiceTicketS4U2Proxy makes a request to get a service ticket for user to Proxy SPN specified
+// SPN format: <SERVICE>/<FQDN> Eg. HTTP/www.example.com
+// The ticket will be added to the client's ticket cache // TODO own cache
+func (cl *Client) GetServiceTicketS4U2Proxy(spn string, userTGS messages.Ticket) (messages.Ticket, messages.EncKDCRepPart, error) {
+	var tkt messages.Ticket
+	var replyInfo messages.EncKDCRepPart
+
+	princ := types.NewPrincipalName(nametype.KRB_NT_PRINCIPAL, spn)
+	realm := cl.spnRealm(princ)
+
+	// if we don't know the SPN's realm, ask the client realm's KDC
+	if realm == "" {
+		realm = cl.Credentials.Realm()
+	}
+
+	tgt, skey, err := cl.sessionTGT(realm)
+	if err != nil {
+		return tkt, replyInfo, err
+	}
+
+	tgsReq, err := messages.NewService4User2ProxyTGSReq(tgt.SName, realm, cl.Config, tgt, skey, princ, false, userTGS)
+	if err != nil {
+		return tkt, replyInfo, err
+	}
+
+	_, resp, err := cl.TGSExchange(tgsReq, realm, tgt, skey, 0)
+	if err != nil {
+		return tkt, replyInfo, err
+	}
+
+	return resp.Ticket, resp.DecryptedEncPart, nil
+}
