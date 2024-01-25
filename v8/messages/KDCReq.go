@@ -430,3 +430,18 @@ func (k *KDCReqBody) Marshal() ([]byte, error) {
 	}
 	return b, nil
 }
+
+// NewService4User2ProxyTGSReq returns a TGS-REQ suitable for user-to-proxy authentication (https://tools.ietf.org/html/rfc4120#section-3.7)
+func NewService4User2ProxyTGSReq(cname types.PrincipalName, kdcRealm string, c *config.Config, clientTGT Ticket, sessionKey types.EncryptionKey, sname types.PrincipalName, renewal bool, verifyingTGT Ticket) (TGSReq, error) {
+	a, err := tgsReq(cname, sname, kdcRealm, renewal, c)
+	if err != nil {
+		return a, err
+	}
+	a.ReqBody.AdditionalTickets = []Ticket{verifyingTGT}
+
+	types.SetFlag(&a.ReqBody.KDCOptions, flags.Canonicalize)
+	types.SetFlag(&a.ReqBody.KDCOptions, flags.ConstrainedDelegation)
+
+	err = a.setPAData(clientTGT, sessionKey)
+	return a, err
+}
