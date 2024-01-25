@@ -132,10 +132,39 @@ func (cl *Client) GetServiceTicketS4U2Proxy(spn string, userTGS messages.Ticket)
 		return tkt, replyInfo, err
 	}
 
-	_, resp, err := cl.TGSExchange(tgsReq, realm, tgt, skey, 0)
+	_, resp, err := cl.tgsExchangeForS4U2Proxy(tgsReq, realm, tgt, skey, 0)
 	if err != nil {
 		return tkt, replyInfo, err
 	}
 
 	return resp.Ticket, resp.DecryptedEncPart, nil
+}
+
+// tgsExchangeForS4U2Proxy exchanges the provided TGS_REQ with the KDC to retrieve a TGS_REP for Proxy.
+// Referrals are automatically handled.
+func (cl *Client) tgsExchangeForS4U2Proxy(tgsReq messages.TGSReq, kdcRealm string, tgt messages.Ticket, sessionKey types.EncryptionKey, referral int) (messages.TGSReq, messages.TGSRep, error) {
+	var tgsRep messages.TGSRep
+	b, err := tgsReq.Marshal()
+	if err != nil {
+		return tgsReq, tgsRep, krberror.Errorf(err, krberror.EncodingError, "TGS Exchange Error: failed to marshal TGS_REQ")
+	}
+	r, err := cl.sendToKDC(b, kdcRealm)
+	if err != nil {
+		if _, ok := err.(messages.KRBError); ok {
+			return tgsReq, tgsRep, krberror.Errorf(err, krberror.KDCError, "TGS Exchange Error: kerberos error response from KDC when requesting for %s", tgsReq.ReqBody.SName.PrincipalNameString())
+		}
+		return tgsReq, tgsRep, krberror.Errorf(err, krberror.NetworkingError, "TGS Exchange Error: issue sending TGS_REQ to KDC")
+	}
+	err = tgsRep.Unmarshal(r)
+	if err != nil {
+		return tgsReq, tgsRep, krberror.Errorf(err, krberror.EncodingError, "TGS Exchange Error: failed to process the TGS_REP")
+	}
+	err = tgsRep.DecryptEncPart(sessionKey)
+	if err != nil {
+		return tgsReq, tgsRep, krberror.Errorf(err, krberror.EncodingError, "TGS Exchange Error: failed to process the TGS_REP")
+	}
+
+	// TODO Verify
+
+	return tgsReq, tgsRep, err
 }
