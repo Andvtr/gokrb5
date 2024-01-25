@@ -262,7 +262,59 @@ func (t *Ticket) Valid(d time.Duration) (bool, error) {
 }
 
 // Marshal ticket to file cache format
-func marshalTicketFileType(tkt Ticket) ([]byte, error) {
+func MarshalTicketFileTypeS4U2Proxy(tkt Ticket, encPart EncKDCRepPart, cname types.PrincipalName) ([]byte, error) {
+	var cacheTicket []byte
+
+	// write client
+	writePrincipal(&cacheTicket, cname, tkt.Realm)
+	// write server
+	writePrincipal(&cacheTicket, tkt.SName, tkt.Realm)
+
+	// write keytype
+	writeInt16(&cacheTicket, uint16(encPart.Key.KeyType))
+	// write key len
+	writeInt32(&cacheTicket, uint32(len(encPart.Key.KeyValue)))
+	// write key value
+	writeBytes(&cacheTicket, encPart.Key.KeyValue)
+
+	// write Auth time
+	writeTimestamp(&cacheTicket, uint32(encPart.AuthTime.Unix()))
+	// write Start time
+	writeTimestamp(&cacheTicket, uint32(encPart.StartTime.Unix()))
+	// write End time
+	writeTimestamp(&cacheTicket, uint32(encPart.EndTime.Unix()))
+	// write Renew time
+	writeTimestamp(&cacheTicket, uint32(encPart.RenewTill.Unix()))
+
+	// write isSKey TODO
+	writeByte(&cacheTicket, byte(0))
+	// write krb flags
+	writeBytes(&cacheTicket, encPart.Flags.Bytes)
+
+	// write count Addr
+	writeInt32(&cacheTicket, uint32(len(encPart.CAddr)))
+	// write len Addresses
+	for _, addr := range encPart.CAddr {
+		writeAddr(&cacheTicket, addr)
+	}
+
+	// write count authData
+	writeInt32(&cacheTicket, uint32(0))
+
+	// write ticket
+	err := writeTGS(&cacheTicket, tkt)
+	if err != nil {
+		return nil, err
+	}
+
+	// write secondTicket TODO
+	writeInt32(&cacheTicket, 0)
+
+	return cacheTicket, nil
+}
+
+// Marshal ticket to file cache format
+func MarshalTicketFileType(tkt Ticket) ([]byte, error) {
 	var cacheTicket []byte
 
 	// write client
