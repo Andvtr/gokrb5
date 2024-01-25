@@ -244,12 +244,6 @@ func GetTicketFromSPNEGO(kt *keytab.Keytab, r *http.Request) (messages.Ticket, e
 		}
 	}
 
-	sname := &mt.APReq.Ticket.SName
-	err = mt.APReq.Ticket.DecryptEncPart(kt, sname)
-	if err != nil {
-		return ticket, fmt.Errorf("DecryptEncPart was failed")
-	}
-
 	ticket = mt.APReq.Ticket
 	return ticket, nil
 }
