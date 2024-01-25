@@ -263,98 +263,60 @@ func (t *Ticket) Valid(d time.Duration) (bool, error) {
 
 // Marshal ticket to file cache format
 func MarshalTicketFileTypeS4U2Proxy(tkt Ticket, encPart EncKDCRepPart, cname types.PrincipalName) ([]byte, error) {
+	return marshalTicketFileType(cname, tkt.SName, encPart.Key, encPart.AuthTime, encPart.StartTime,
+		encPart.EndTime, encPart.RenewTill, encPart.Flags.Bytes, encPart.CAddr, nil, tkt)
+}
+
+// Marshal ticket to file cache format
+func MarshalTicketFileType(tkt Ticket) ([]byte, error) {
+	DecEncPart := tkt.DecryptedEncPart
+	return marshalTicketFileType(DecEncPart.CName, tkt.SName, DecEncPart.Key, DecEncPart.AuthTime, DecEncPart.StartTime,
+		DecEncPart.EndTime, DecEncPart.RenewTill, DecEncPart.Flags.Bytes, DecEncPart.CAddr, DecEncPart.AuthorizationData, tkt)
+}
+
+func marshalTicketFileType(cname types.PrincipalName, sname types.PrincipalName, key types.EncryptionKey,
+	authTime time.Time, startTime time.Time, endTime time.Time, renewTill time.Time, flags []byte,
+	cAddr types.HostAddresses, authData types.AuthorizationData, tkt Ticket) ([]byte, error) {
 	var cacheTicket []byte
 
 	// write client
 	writePrincipal(&cacheTicket, cname, tkt.Realm)
 	// write server
-	writePrincipal(&cacheTicket, tkt.SName, tkt.Realm)
+	writePrincipal(&cacheTicket, sname, tkt.Realm)
 
 	// write keytype
-	writeInt16(&cacheTicket, uint16(encPart.Key.KeyType))
+	writeInt16(&cacheTicket, uint16(key.KeyType))
 	// write key len
-	writeInt32(&cacheTicket, uint32(len(encPart.Key.KeyValue)))
+	writeInt32(&cacheTicket, uint32(len(key.KeyValue)))
 	// write key value
-	writeBytes(&cacheTicket, encPart.Key.KeyValue)
+	writeBytes(&cacheTicket, key.KeyValue)
 
 	// write Auth time
-	writeTimestamp(&cacheTicket, uint32(encPart.AuthTime.Unix()))
+	writeTimestamp(&cacheTicket, uint32(authTime.Unix()))
 	// write Start time
-	writeTimestamp(&cacheTicket, uint32(encPart.StartTime.Unix()))
+	writeTimestamp(&cacheTicket, uint32(startTime.Unix()))
 	// write End time
-	writeTimestamp(&cacheTicket, uint32(encPart.EndTime.Unix()))
+	writeTimestamp(&cacheTicket, uint32(endTime.Unix()))
 	// write Renew time
-	writeTimestamp(&cacheTicket, uint32(encPart.RenewTill.Unix()))
+	writeTimestamp(&cacheTicket, uint32(renewTill.Unix()))
 
 	// write isSKey TODO
 	writeByte(&cacheTicket, byte(0))
 	// write krb flags
-	writeBytes(&cacheTicket, encPart.Flags.Bytes)
+	writeBytes(&cacheTicket, flags)
 
 	// write count Addr
-	writeInt32(&cacheTicket, uint32(len(encPart.CAddr)))
+	writeInt32(&cacheTicket, uint32(len(cAddr)))
 	// write len Addresses
-	for _, addr := range encPart.CAddr {
+	for _, addr := range cAddr {
 		writeAddr(&cacheTicket, addr)
 	}
 
 	// write count authData
-	writeInt32(&cacheTicket, uint32(0))
-
-	// write ticket
-	err := writeTGS(&cacheTicket, tkt)
-	if err != nil {
-		return nil, err
-	}
-
-	// write secondTicket TODO
-	writeInt32(&cacheTicket, 0)
-
-	return cacheTicket, nil
-}
-
-// Marshal ticket to file cache format
-func MarshalTicketFileType(tkt Ticket) ([]byte, error) {
-	var cacheTicket []byte
-
-	// write client
-	writePrincipal(&cacheTicket, tkt.DecryptedEncPart.CName, tkt.Realm)
-	// write server
-	writePrincipal(&cacheTicket, tkt.SName, tkt.Realm)
-
-	// write keytype
-	writeInt16(&cacheTicket, uint16(tkt.DecryptedEncPart.Key.KeyType))
-	// write key len
-	writeInt32(&cacheTicket, uint32(len(tkt.DecryptedEncPart.Key.KeyValue)))
-	// write key value
-	writeBytes(&cacheTicket, tkt.DecryptedEncPart.Key.KeyValue)
-
-	// write Auth time
-	writeTimestamp(&cacheTicket, uint32(tkt.DecryptedEncPart.AuthTime.Unix()))
-	// write Start time
-	writeTimestamp(&cacheTicket, uint32(tkt.DecryptedEncPart.StartTime.Unix()))
-	// write End time
-	writeTimestamp(&cacheTicket, uint32(tkt.DecryptedEncPart.EndTime.Unix()))
-	// write Renew time
-	writeTimestamp(&cacheTicket, uint32(tkt.DecryptedEncPart.RenewTill.Unix()))
-
-	// write isSKey TODO
-	writeByte(&cacheTicket, byte(0))
-	// write krb flags
-	writeBytes(&cacheTicket, tkt.DecryptedEncPart.Flags.Bytes)
-
-	// write count Addr
-	writeInt32(&cacheTicket, uint32(len(tkt.DecryptedEncPart.CAddr)))
+	writeInt32(&cacheTicket, uint32(len(authData)))
 	// write len Addresses
-	for _, addr := range tkt.DecryptedEncPart.CAddr {
-		writeAddr(&cacheTicket, addr)
-	}
-
-	// write count authData
-	writeInt32(&cacheTicket, uint32(len(tkt.DecryptedEncPart.AuthorizationData)))
-	// write len Addresses
-	for _, authData := range tkt.DecryptedEncPart.AuthorizationData {
-		writeAuthData(&cacheTicket, authData)
+	for _, data := range authData {
+		writeAuthData(&cacheTicket, data)
 	}
 
 	// write ticket
