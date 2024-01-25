@@ -274,6 +274,7 @@ func MarshalTicketFileType(tkt Ticket) ([]byte, error) {
 		DecEncPart.EndTime, DecEncPart.RenewTill, DecEncPart.Flags.Bytes, DecEncPart.CAddr, DecEncPart.AuthorizationData, tkt)
 }
 
+// Marshal to file cache format from kerberos ticket fields (https://datatracker.ietf.org/doc/html/rfc4120#section-5.3)
 func marshalTicketFileType(cname types.PrincipalName, sname types.PrincipalName, key types.EncryptionKey,
 	authTime time.Time, startTime time.Time, endTime time.Time, renewTill time.Time, flags []byte,
 	cAddr types.HostAddresses, authData types.AuthorizationData, tkt Ticket) ([]byte, error) {
