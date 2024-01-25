@@ -127,7 +127,7 @@ func (cl *Client) GetServiceTicketS4U2Proxy(spn string, userTGS messages.Ticket)
 		return tkt, replyInfo, err
 	}
 
-	tgsReq, err := messages.NewService4User2ProxyTGSReq(tgt.SName, realm, cl.Config, tgt, skey, princ, false, userTGS)
+	tgsReq, err := messages.NewService4User2ProxyTGSReq(cl.Credentials.CName(), realm, cl.Config, tgt, skey, princ, false, userTGS)
 	if err != nil {
 		return tkt, replyInfo, err
 	}
