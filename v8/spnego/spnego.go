@@ -222,7 +222,6 @@ func GetTicketFromSPNEGO(kt *keytab.Keytab, r *http.Request) (messages.Ticket, e
 		spnego.Log("%s - SPNEGO could not parse client address: %v", r.RemoteAddr, err)
 	}
 
-	// TODO убрать возможность отправки сообщений
 	st, err := getSPNEGOTokenFromRequest(spnego, r)
 	if st == nil || err != nil {
 		// response to client and logging handled in function above so just return
@@ -249,12 +248,6 @@ func GetTicketFromSPNEGO(kt *keytab.Keytab, r *http.Request) (messages.Ticket, e
 	err = mt.APReq.Ticket.DecryptEncPart(kt, sname)
 	if err != nil {
 		return ticket, fmt.Errorf("DecryptEncPart was failed")
-	}
-
-	// Decrypt authenticator with session key from ticket's encrypted part
-	err = mt.APReq.DecryptAuthenticator(mt.APReq.Ticket.DecryptedEncPart.Key)
-	if err != nil {
-		return ticket, fmt.Errorf("DecryptAuthenticator was failed")
 	}
 
 	ticket = mt.APReq.Ticket
