@@ -262,16 +262,16 @@ func (t *Ticket) Valid(d time.Duration) (bool, error) {
 }
 
 // Marshal ticket to file cache format
-func MarshalTicketFileTypeS4U2Proxy(tkt Ticket, encPart EncKDCRepPart, cname types.PrincipalName) ([]byte, error) {
-	return marshalTicketFileType(cname, tkt.SName, encPart.Key, encPart.AuthTime, encPart.StartTime,
-		encPart.EndTime, encPart.RenewTill, encPart.Flags.Bytes, encPart.CAddr, nil, tkt)
+func (t *Ticket) MarshalTicketFileTypeS4U2Proxy(encPart EncKDCRepPart, cname types.PrincipalName) ([]byte, error) {
+	return marshalTicketFileType(cname, t.SName, encPart.Key, encPart.AuthTime, encPart.StartTime,
+		encPart.EndTime, encPart.RenewTill, encPart.Flags.Bytes, encPart.CAddr, nil, *t)
 }
 
 // Marshal ticket to file cache format
-func MarshalTicketFileType(tkt Ticket) ([]byte, error) {
-	DecEncPart := tkt.DecryptedEncPart
-	return marshalTicketFileType(DecEncPart.CName, tkt.SName, DecEncPart.Key, DecEncPart.AuthTime, DecEncPart.StartTime,
-		DecEncPart.EndTime, DecEncPart.RenewTill, DecEncPart.Flags.Bytes, DecEncPart.CAddr, DecEncPart.AuthorizationData, tkt)
+func (t *Ticket) MarshalTicketFileType() ([]byte, error) {
+	DecEncPart := t.DecryptedEncPart
+	return marshalTicketFileType(DecEncPart.CName, t.SName, DecEncPart.Key, DecEncPart.AuthTime, DecEncPart.StartTime,
+		DecEncPart.EndTime, DecEncPart.RenewTill, DecEncPart.Flags.Bytes, DecEncPart.CAddr, DecEncPart.AuthorizationData, *t)
 }
 
 // Marshal to file cache format from kerberos ticket fields (https://datatracker.ietf.org/doc/html/rfc4120#section-5.3)
