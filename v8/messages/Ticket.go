@@ -302,7 +302,7 @@ func marshalTicketFileType(cname types.PrincipalName, sname types.PrincipalName,
 	writeTimestamp(&cacheTicket, uint32(renewTill.Unix()))
 
 	// write isSKey TODO
-	writeByte(&cacheTicket, byte(0))
+	writeBytes(&cacheTicket, []byte{0})
 	// write krb flags
 	writeBytes(&cacheTicket, flags)
 
@@ -344,34 +344,29 @@ func writeBytes(b *[]byte, bytes []byte) {
 	*b = append(*b, bytes...)
 }
 
-func writeByte(b *[]byte, numb byte) {
-	*b = append(*b, numb)
+func writeData(b *[]byte, numb []byte) {
+	// write len
+	writeInt32(b, uint32(len(numb)))
+	// write bytes
+	writeBytes(b, numb)
 }
 
 func writeTimestamp(b *[]byte, timeStamp uint32) {
 	writeInt32(b, timeStamp)
 }
 
-func writeBytesFromString(b *[]byte, s string) {
-	*b = append(*b, []byte(s)...)
-}
-
 func writeAuthData(b *[]byte, authData types.AuthorizationDataEntry) {
 	// write auth type
 	writeInt16(b, uint16(authData.ADType))
-	// write auth len
-	writeInt32(b, uint32(len(authData.ADData)))
-	// write addr
-	writeBytes(b, authData.ADData)
+	// write auth data
+	writeData(b, authData.ADData)
 }
 
 func writeAddr(b *[]byte, addr types.HostAddress) {
 	// write addr type
 	writeInt16(b, uint16(addr.AddrType))
-	// write addr len
-	writeInt32(b, uint32(len(addr.Address)))
-	// write addr
-	writeBytes(b, addr.Address)
+	// write addr data
+	writeData(b, addr.Address)
 }
 
 // Write the entry's principal bytes.
@@ -383,34 +378,21 @@ func writePrincipal(b *[]byte, name types.PrincipalName, realm string) {
 	// write nc
 	writeInt32(b, uint32(len(name.NameString)))
 
-	// write len realm
-	writeInt32(b, uint32(len(realm)))
-
 	// write realm
-	writeBytesFromString(b, realm)
+	writeData(b, []byte(realm))
 
-	// write PrincipalName string TODO
+	// write PrincipalName string
 	for _, value := range name.NameString {
-		writeInt32(b, uint32(len(value)))
-		writeBytesFromString(b, value)
+		writeData(b, []byte(value))
 	}
 }
 
 func writeTGS(b *[]byte, tkt Ticket) error {
-	// write ticket
-	type ccacheFormat struct {
-		TktVNO  int                 `asn1:"explicit,tag:0"`
-		Realm   string              `asn1:"generalstring,explicit,tag:1"`
-		SName   types.PrincipalName `asn1:"explicit,tag:2"`
-		EncPart types.EncryptedData `asn1:"explicit,tag:3"`
-	}
-	var ccacheTicket ccacheFormat
-	ccacheTicket.TktVNO = tkt.TktVNO
-	ccacheTicket.Realm = tkt.Realm
-	ccacheTicket.SName = tkt.SName
-	ccacheTicket.EncPart = tkt.EncPart
+	var DecryptedEncPart EncTicketPart
+	// DecryptedEncPart must be nil for correct ASN1 marshal
+	tkt.DecryptedEncPart = DecryptedEncPart
 
-	TGSbytes, err := asn1.Marshal(ccacheTicket)
+	TGSbytes, err := asn1.Marshal(tkt)
 	if err != nil {
 		return err
 	}
@@ -426,10 +408,8 @@ func writeTGS(b *[]byte, tkt Ticket) error {
 		return err
 	}
 
-	// write ticket len
-	writeInt32(b, uint32(len(ASN1TGS)))
 	// write ticket
-	writeBytes(b, ASN1TGS)
+	writeData(b, ASN1TGS)
 
 	return nil
 }
