@@ -443,7 +443,7 @@ func (c *Credential) Marshal() []byte {
 	writeData(&cacheTicket, c.Ticket)
 
 	// write secondTicket
-	writeData(&cacheTicket, c.Ticket)
+	writeData(&cacheTicket, c.SecondTicket)
 
 	return cacheTicket
 }
