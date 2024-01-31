@@ -412,13 +412,13 @@ func (c *Credential) Marshal() []byte {
 	writeBytes(&cacheTicket, c.Key.KeyValue)
 
 	// write Auth time
-	writeTimestamp(&cacheTicket, uint32(c.AuthTime.Unix()))
+	writeTimestamp(&cacheTicket, c.AuthTime)
 	// write Start time
-	writeTimestamp(&cacheTicket, uint32(c.StartTime.Unix()))
+	writeTimestamp(&cacheTicket, c.StartTime)
 	// write End time
-	writeTimestamp(&cacheTicket, uint32(c.EndTime.Unix()))
+	writeTimestamp(&cacheTicket, c.EndTime)
 	// write Renew time
-	writeTimestamp(&cacheTicket, uint32(c.RenewTill.Unix()))
+	writeTimestamp(&cacheTicket, c.RenewTill)
 
 	// write isSKey TODO
 	writeBytes(&cacheTicket, []byte{0})
@@ -467,8 +467,12 @@ func writeData(b *[]byte, numb []byte) {
 	writeBytes(b, numb)
 }
 
-func writeTimestamp(b *[]byte, timeStamp uint32) {
-	writeInt32(b, timeStamp)
+func writeTimestamp(b *[]byte, timeStamp time.Time) {
+	if timeStamp.IsZero() {
+		writeInt32(b, 0)
+	} else {
+		writeInt32(b, uint32(timeStamp.Unix()))
+	}
 }
 
 func writeAuthData(b *[]byte, authData types.AuthorizationDataEntry) {
