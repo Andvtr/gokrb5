@@ -71,6 +71,63 @@ func LoadCCache(cpath string) (*CCache, error) {
 	return c, err
 }
 
+// AppendCCache appends credential to a cache file. Only 4 version.
+func AppendCCache(cpath string, cred Credential) error {
+	ccache, err := os.OpenFile(cpath, os.O_APPEND|os.O_WRONLY, 0600)
+	if err != nil {
+		return err
+	}
+
+	_, err = ccache.Write(cred.Marshal())
+	if err != nil {
+		return err
+	}
+
+	err = ccache.Close()
+	if err != nil {
+		return err
+	}
+
+	return err
+}
+
+// CreateCCache creates cache file. Only 4 version.
+func CreateCCache(cpath string, cred Credential, header header, defPrincipal principal) error {
+	ccache, err := os.OpenFile(cpath, os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return err
+	}
+
+	//The first byte of the file always has the value 5
+	//The second byte contains the version number (Now for only 4)
+	fileBytes := []byte{05, 04}
+
+	//Append header lengh
+	//Versions 3 & 4 always uses big-endian byte order
+	// TODO! Header now is 0
+	fileBytes = append(fileBytes, 00, 00)
+
+	//Append header
+	// TODO! Header now is 0
+	//fileBytes = append(fileBytes, header.fields)
+
+	//Append default principal
+	writePrincipal(&fileBytes, defPrincipal.PrincipalName, defPrincipal.Realm)
+
+	//Write cache file with one credential
+	_, err = ccache.Write(append(fileBytes, cred.Marshal()...))
+	if err != nil {
+		return err
+	}
+
+	err = ccache.Close()
+	if err != nil {
+		return err
+	}
+
+	return err
+}
+
 // Unmarshal a byte slice of credential cache data into CCache type.
 func (c *CCache) Unmarshal(b []byte) error {
 	p := 0
@@ -332,7 +389,7 @@ func isNativeEndianLittle() bool {
 	return endian
 }
 
-// Marshal to file cache format from kerberos credentional (https://datatracker.ietf.org/doc/html/rfc4120#section-5.3)
+// Marshal to file cache format from kerberos credential (https://datatracker.ietf.org/doc/html/rfc4120#section-5.3)
 func (c *Credential) Marshal() []byte {
 	var cacheTicket []byte
 
