@@ -331,3 +331,111 @@ func isNativeEndianLittle() bool {
 	}
 	return endian
 }
+
+// Marshal to file cache format from kerberos credentional (https://datatracker.ietf.org/doc/html/rfc4120#section-5.3)
+func (c *Credential) Marshal() []byte {
+	var cacheTicket []byte
+
+	// write client
+	writePrincipal(&cacheTicket, c.Client.PrincipalName, c.Client.Realm)
+	// write server
+	writePrincipal(&cacheTicket, c.Server.PrincipalName, c.Server.Realm)
+
+	// write keytype
+	writeInt16(&cacheTicket, uint16(c.Key.KeyType))
+	// write key len
+	writeInt32(&cacheTicket, uint32(len(c.Key.KeyValue)))
+	// write key value
+	writeBytes(&cacheTicket, c.Key.KeyValue)
+
+	// write Auth time
+	writeTimestamp(&cacheTicket, uint32(c.AuthTime.Unix()))
+	// write Start time
+	writeTimestamp(&cacheTicket, uint32(c.StartTime.Unix()))
+	// write End time
+	writeTimestamp(&cacheTicket, uint32(c.EndTime.Unix()))
+	// write Renew time
+	writeTimestamp(&cacheTicket, uint32(c.RenewTill.Unix()))
+
+	// write isSKey TODO
+	writeBytes(&cacheTicket, []byte{0})
+	// write krb flags
+	writeBytes(&cacheTicket, c.TicketFlags.Bytes)
+
+	// write count Addr
+	writeInt32(&cacheTicket, uint32(len(c.Addresses)))
+	// write len Addresses
+	for _, addr := range c.Addresses {
+		writeAddr(&cacheTicket, addr)
+	}
+
+	// write count authData
+	writeInt32(&cacheTicket, uint32(len(c.AuthData)))
+	// write len Addresses
+	for _, data := range c.AuthData {
+		writeAuthData(&cacheTicket, data)
+	}
+
+	// write ticket
+	writeData(&cacheTicket, c.Ticket)
+
+	// write secondTicket
+	writeData(&cacheTicket, c.Ticket)
+
+	return cacheTicket
+}
+
+func writeInt32(b *[]byte, numb uint32) {
+	*b = append(*b, byte(numb>>24), byte(numb>>16), byte(numb>>8), byte(numb))
+}
+
+func writeInt16(b *[]byte, numb uint16) {
+	*b = append(*b, byte(numb>>8), byte(numb))
+}
+
+func writeBytes(b *[]byte, bytes []byte) {
+	*b = append(*b, bytes...)
+}
+
+func writeData(b *[]byte, numb []byte) {
+	// write len
+	writeInt32(b, uint32(len(numb)))
+	// write bytes
+	writeBytes(b, numb)
+}
+
+func writeTimestamp(b *[]byte, timeStamp uint32) {
+	writeInt32(b, timeStamp)
+}
+
+func writeAuthData(b *[]byte, authData types.AuthorizationDataEntry) {
+	// write auth type
+	writeInt16(b, uint16(authData.ADType))
+	// write auth data
+	writeData(b, authData.ADData)
+}
+
+func writeAddr(b *[]byte, addr types.HostAddress) {
+	// write addr type
+	writeInt16(b, uint16(addr.AddrType))
+	// write addr data
+	writeData(b, addr.Address)
+}
+
+// Write the entry's principal bytes.
+func writePrincipal(b *[]byte, name types.PrincipalName, realm string) {
+	// version > 1
+	// write principal name type
+	writeInt32(b, uint32(name.NameType))
+
+	// write nc
+	writeInt32(b, uint32(len(name.NameString)))
+
+	// write realm
+	writeData(b, []byte(realm))
+
+	// write PrincipalName string
+	for _, value := range name.NameString {
+		writeData(b, []byte(value))
+	}
+}
