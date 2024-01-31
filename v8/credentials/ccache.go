@@ -98,6 +98,22 @@ func CreateCCache(cpath string, cred Credential, header header, defPrincipal pri
 		return err
 	}
 
+	//Write cache file with one credential
+	_, err = ccache.Write(MarshalCCache(cred, header, defPrincipal))
+	if err != nil {
+		return err
+	}
+
+	err = ccache.Close()
+	if err != nil {
+		return err
+	}
+
+	return err
+}
+
+// MarshalCCache returns cache file bytes. Only 4 version.
+func MarshalCCache(cred Credential, header header, defPrincipal principal) []byte {
 	//The first byte of the file always has the value 5
 	//The second byte contains the version number (Now for only 4)
 	fileBytes := []byte{05, 04}
@@ -115,17 +131,7 @@ func CreateCCache(cpath string, cred Credential, header header, defPrincipal pri
 	writePrincipal(&fileBytes, defPrincipal.PrincipalName, defPrincipal.Realm)
 
 	//Write cache file with one credential
-	_, err = ccache.Write(append(fileBytes, cred.Marshal()...))
-	if err != nil {
-		return err
-	}
-
-	err = ccache.Close()
-	if err != nil {
-		return err
-	}
-
-	return err
+	return append(fileBytes, cred.Marshal()...)
 }
 
 // Unmarshal a byte slice of credential cache data into CCache type.
