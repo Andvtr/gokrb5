@@ -20,13 +20,13 @@ const (
 // CCache is the file credentials cache as define here: https://web.mit.edu/kerberos/krb5-latest/doc/formats/ccache_file_format.html
 type CCache struct {
 	Version          uint8
-	Header           header
-	DefaultPrincipal principal
+	Header           Header
+	DefaultPrincipal Principal
 	Credentials      []*Credential
 	Path             string
 }
 
-type header struct {
+type Header struct {
 	length uint16
 	fields []headerField
 }
@@ -38,15 +38,15 @@ type headerField struct {
 }
 
 // Credential cache entry principal struct.
-type principal struct {
+type Principal struct {
 	Realm         string
 	PrincipalName types.PrincipalName
 }
 
 // Credential holds a Kerberos client's ccache credential information.
 type Credential struct {
-	Client       principal
-	Server       principal
+	Client       Principal
+	Server       Principal
 	Key          types.EncryptionKey
 	AuthTime     time.Time
 	StartTime    time.Time
@@ -92,7 +92,7 @@ func AppendCCache(cpath string, cred Credential) error {
 }
 
 // CreateCCache creates cache file. Only 4 version.
-func CreateCCache(cpath string, cred Credential, header header, defPrincipal principal) error {
+func CreateCCache(cpath string, cred Credential, header Header, defPrincipal Principal) error {
 	ccache, err := os.OpenFile(cpath, os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		return err
@@ -113,7 +113,7 @@ func CreateCCache(cpath string, cred Credential, header header, defPrincipal pri
 }
 
 // MarshalCCache returns cache file bytes. Only 4 version.
-func MarshalCCache(cred Credential, header header, defPrincipal principal) []byte {
+func MarshalCCache(cred Credential, header Header, defPrincipal Principal) []byte {
 	//The first byte of the file always has the value 5
 	//The second byte contains the version number (Now for only 4)
 	fileBytes := []byte{05, 04}
@@ -176,7 +176,7 @@ func parseHeader(b []byte, p *int, c *CCache, e *binary.ByteOrder) error {
 	if c.Version != 4 {
 		return errors.New("Credentials cache version is not 4 so there is no header to parse.")
 	}
-	h := header{}
+	h := Header{}
 	h.length = uint16(readInt16(b, p, e))
 	for *p <= int(h.length) {
 		f := headerField{}
@@ -194,7 +194,7 @@ func parseHeader(b []byte, p *int, c *CCache, e *binary.ByteOrder) error {
 }
 
 // Parse the Keytab bytes of a principal into a Keytab entry's principal.
-func parsePrincipal(b []byte, p *int, c *CCache, e *binary.ByteOrder) (princ principal) {
+func parsePrincipal(b []byte, p *int, c *CCache, e *binary.ByteOrder) (princ Principal) {
 	if c.Version != 1 {
 		//Name Type is omitted in version 1
 		princ.PrincipalName.NameType = readInt32(b, p, e)
