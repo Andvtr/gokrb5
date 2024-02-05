@@ -117,6 +117,27 @@ func (cl *Client) GetCachedTicket(spn string) (messages.Ticket, types.Encryption
 	return tkt, key, false
 }
 
+// GetCachedEntry returns a cache entry from the cache for the SPN.
+// Only a entry that is currently valid will be returned.
+func (cl *Client) GetCachedEntry(spn string) (CacheEntry, bool) {
+	if e, ok := cl.cache.getEntry(spn); ok {
+		//If within time window of ticket return it
+		if time.Now().UTC().After(e.StartTime) && time.Now().UTC().Before(e.EndTime) {
+			cl.Log("ticket received from cache for %s", spn)
+			return e, true
+		} else if time.Now().UTC().Before(e.RenewTill) {
+			e, err := cl.renewTicket(e)
+			if err != nil {
+				return e, false
+			}
+			return e, true
+		}
+	}
+
+	var ent CacheEntry
+	return ent, false
+}
+
 // renewTicket renews a cache entry ticket.
 // To renew from outside the client package use GetCachedTicket
 func (cl *Client) renewTicket(e CacheEntry) (CacheEntry, error) {
