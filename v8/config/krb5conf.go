@@ -444,6 +444,9 @@ func parseRealms(lines []string) (realms []Realm, err error) {
 			c--
 			if c == 0 {
 				var r Realm
+				if start+1 > i {
+					return nil, errors.New("parcing config's realms section was failed")
+				}
 				e := r.parseLines(name, lines[start+1:i])
 				if e != nil {
 					if _, ok := e.(UnsupportedDirective); !ok {
