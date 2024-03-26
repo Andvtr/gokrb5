@@ -91,3 +91,9 @@ func (s *Settings) JSON() (string, error) {
 	return string(b), nil
 
 }
+
+func SetpreAuthEType(etype int32) func(*Settings) {
+	return func(s *Settings) {
+		s.preAuthEType = etype
+	}
+}
