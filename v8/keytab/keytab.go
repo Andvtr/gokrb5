@@ -163,7 +163,7 @@ func (kt *Keytab) AddEntryWithHash(principalName, realm, hash string, ts time.Ti
 
 	hashBytes, err := hex.DecodeString(hash)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("decode hash string was failed: %v", err)
 	}
 	key := types.EncryptionKey{
 		KeyType:  encType,
