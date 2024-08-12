@@ -1,6 +1,6 @@
 # gokrb5
 
-It is recommended to use the latest version: [![Version](https://img.shields.io/github/release/jcmturner/gokrb5.svg)](https://github.com/cobraqxx/gokrb5/releases)
+It is recommended to use the latest version:  [![Version](https://img.shields.io/github/release/jcmturner/gokrb5.svg)](https://github.com/cobraqxx/gokrb5/releases)
 
 Development will be focused on the latest major version. New features will only be targeted at this version.
 
