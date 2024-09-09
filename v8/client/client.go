@@ -187,7 +187,7 @@ func (cl *Client) Login() error {
 	if err != nil {
 		return err
 	}
-	cl.addSession(ASRep.Ticket, ASRep.DecryptedEncPart)
+	cl.AddSession(ASRep.Ticket, ASRep.DecryptedEncPart)
 	return nil
 }
 
@@ -229,7 +229,7 @@ func (cl *Client) realmLogin(realm string) error {
 	if err != nil {
 		return err
 	}
-	cl.addSession(tgsRep.Ticket, tgsRep.DecryptedEncPart)
+	cl.AddSession(tgsRep.Ticket, tgsRep.DecryptedEncPart)
 
 	return nil
 }
