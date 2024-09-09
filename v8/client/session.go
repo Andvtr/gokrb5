@@ -84,7 +84,7 @@ type jsonSession struct {
 
 // AddSession adds a session for a realm with a TGT to the client's session cache.
 // A goroutine is started to automatically renew the TGT before expiry.
-func (cl *Client) addSession(tgt messages.Ticket, dep messages.EncKDCRepPart) {
+func (cl *Client) AddSession(tgt messages.Ticket, dep messages.EncKDCRepPart) {
 	if strings.ToLower(tgt.SName.NameString[0]) != "krbtgt" {
 		// Not a TGT
 		return
