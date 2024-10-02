@@ -153,3 +153,26 @@ func (pa *PAData) GetETypeInfo2() (d ETypeInfo2, err error) {
 	_, err = asn1.Unmarshal(pa.PADataValue, &d)
 	return
 }
+
+//	KERB-PA-PAC-REQUEST ::= SEQUENCE {
+//		include-pac[0] BOOLEAN --If TRUE, and no pac present, include PAC.
+//							   --If FALSE, and PAC present, remove PAC
+//		}
+//
+// https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/765795ba-9e05-4220-9bd3-b34464e413a7
+type PAPacReq struct {
+	include_pac bool
+}
+
+// GetPAEncTSEncAsnMarshalled returns the bytes of a PAEncTSEnc.
+func GetPAPacReqAsnMarshalled(i bool) ([]byte, error) {
+	b, err := asn1.Marshal(PAPacReq{
+		include_pac: i,
+	})
+	if err != nil {
+		return b, fmt.Errorf("error mashaling PAPacReq: %v", err)
+	}
+	return b, nil
+}
+
+

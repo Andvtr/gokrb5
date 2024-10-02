@@ -10,6 +10,7 @@ import (
 type Settings struct {
 	disablePAFXFast         bool
 	assumePreAuthentication bool
+	cert                    bool
 	preAuthEType            int32
 	logger                  *log.Logger
 }
@@ -27,6 +28,20 @@ func NewSettings(settings ...func(*Settings)) *Settings {
 		set(s)
 	}
 	return s
+}
+
+// EnableCertAuth used to configure the client auth via cert
+//
+// s := NewSettings(EnableCertAuth(true))
+func EnableCertAuth(b bool) func(*Settings) {
+	return func(s *Settings) {
+		s.cert = b
+	}
+}
+
+// CertAuth indicates is the client auth via certificate
+func (s *Settings) CertAuth() bool {
+	return s.cert
 }
 
 // DisablePAFXFAST used to configure the client to not use PA_FX_FAST.
